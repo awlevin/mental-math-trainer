@@ -211,7 +211,7 @@ const ADD_LEVELS = [
 function Keypad({ onPress, onBack, onSubmit }) {
   return (
     <div className="pad">
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+      {[7, 8, 9, 4, 5, 6, 1, 2, 3].map((d) => (
         <button key={d} className="key" onClick={() => onPress(String(d))}>{d}</button>
       ))}
       <button className="key back" onClick={onBack}>⌫</button>
@@ -226,7 +226,9 @@ function Sprint({ active, config }) {
   const { symbol, apply, storageKey, factNoun } = config;
   const [problem, setProblem] = useState(() => [rand(2, 9), rand(2, 9)]);
   const [input, setInput] = useState("");
-  const [tPhase, setTPhase] = useState("solve"); // solve | flash | wrongpause | roundend
+  // Starts gated on "ready" so the clock on problem 1 begins when the user is
+  // actually looking at it, not when the page loads.
+  const [tPhase, setTPhase] = useState("ready"); // ready | solve | flash | wrongpause | roundend
   const [tFlash, setTFlash] = useState(null);
   const [pending, setPending] = useState(null);
   const [tRound, setTRound] = useState([]);
@@ -402,7 +404,8 @@ function Sprint({ active, config }) {
         else if (e.key === "Backspace") backspace();
         else if (e.key === "Enter") submit();
       } else if (e.key === "Enter") {
-        if (tPhase === "wrongpause") resolvePending("wrong");
+        if (tPhase === "ready") newProblem();
+        else if (tPhase === "wrongpause") resolvePending("wrong");
         else if (tPhase === "roundend") startNewRound();
       }
     };
@@ -445,7 +448,14 @@ function Sprint({ active, config }) {
   return (
     <>
       <div className="card">
-        {tPhase === "roundend" ? (
+        {tPhase === "ready" ? (
+          <div className="ready">
+            <h2>Round {tHistory.length + 1}</h2>
+            <p>{ROUND_LEN} problems, timed from the moment you start.</p>
+            <button className="nextbtn" onClick={newProblem}>Start round</button>
+            <div className="readyhint">or press Enter</div>
+          </div>
+        ) : tPhase === "roundend" ? (
           <div className="roundend">
             <h2>Round {tHistory.length + 1} complete</h2>
             <div className="bigstats">
@@ -590,7 +600,9 @@ function Ladder({ active, config }) {
   const [level, setLevel] = useState(0);
   const [problem, setProblem] = useState(() => levels[0].gen());
   const [input, setInput] = useState("");
-  const [phase, setPhase] = useState("solve"); // solve | correct | walkthrough | walkdone | levelup
+  // Gated on "ready" for the same reason as Sprint: don't time a problem the
+  // user hasn't looked at yet.
+  const [phase, setPhase] = useState("ready"); // ready | solve | correct | walkthrough | walkdone | levelup
   const [walk, setWalk] = useState(null);
   const [subFlash, setSubFlash] = useState(null);
   const [windowResults, setWindowResults] = useState([]);
@@ -678,7 +690,8 @@ function Ladder({ active, config }) {
   };
 
   const advanceLevel = () => { const next = level + 1; setLevel(next); newProblem(next); };
-  const switchLevel = (i) => { clearTimeout(timeoutRef.current); setLevel(i); setWindowResults([]); newProblem(i); };
+  // Picking a level from the ladder re-gates: the clock waits for Start.
+  const switchLevel = (i) => { clearTimeout(timeoutRef.current); setLevel(i); setWindowResults([]); newProblem(i); setPhase("ready"); };
 
   const canType = phase === "solve" || phase === "walkthrough";
   const press = (d) => { if (canType && input.length < 5) setInput((v) => (v === "0" ? String(d) : v + d)); };
@@ -692,7 +705,8 @@ function Ladder({ active, config }) {
         else if (e.key === "Backspace") backspace();
         else if (e.key === "Enter") submit();
       } else if (e.key === "Enter") {
-        if (phase === "walkdone") newProblem(level);
+        if (phase === "ready") newProblem(level);
+        else if (phase === "walkdone") newProblem(level);
         else if (phase === "levelup") advanceLevel();
       }
     };
@@ -719,7 +733,14 @@ function Ladder({ active, config }) {
         ))}
       </div>
       <div className="card">
-        {phase === "levelup" ? (
+        {phase === "ready" ? (
+          <div className="ready">
+            <h2>{levels[level].name}</h2>
+            <p>{levels[level].desc}. Timed from the moment you start.</p>
+            <button className="nextbtn" onClick={() => newProblem(level)}>Start</button>
+            <div className="readyhint">or press Enter</div>
+          </div>
+        ) : phase === "levelup" ? (
           <div className="levelup">
             <h2>Level cleared</h2>
             <p>{NEEDED} of your last {WINDOW} correct. Next up: <strong>{levels[level + 1].name}</strong> — {levels[level + 1].desc}.</p>
@@ -1034,6 +1055,11 @@ export default function MentalMathTrainer() {
         .levelup p { font-size: 14px; color: #4A5A75; margin-bottom: 16px; }
 
         .roundend h2 { font-size: 22px; font-weight: 800; text-align: center; margin: 4px 0 12px; }
+
+        .ready { text-align: center; padding: 18px 0 6px; }
+        .ready h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+        .ready p { font-size: 14px; color: #4A5A75; margin-bottom: 18px; }
+        .readyhint { font-size: 11.5px; color: #8A97AC; font-weight: 600; margin-top: 8px; }
         .bigstats { display: flex; gap: 8px; margin-bottom: 12px; }
         .bigstat { flex: 1; background: #F4F7FA; border-radius: 10px; padding: 10px 6px; text-align: center; }
         .bigstat .v { font-family: 'IBM Plex Mono'; font-size: 22px; font-weight: 700; }
