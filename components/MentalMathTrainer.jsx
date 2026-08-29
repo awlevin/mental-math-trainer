@@ -236,7 +236,7 @@ function Sprint({ active, config }) {
   const [factStats, setFactStats] = useState({});
   const [isReview, setIsReview] = useState(false);
   const [heatMetric, setHeatMetric] = useState("seen");
-  const [startTime, setStartTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(() => Date.now());
   const [lastTime, setLastTime] = useState(null);
   const retryRef = useRef([]);
   const countRef = useRef(0);
@@ -265,7 +265,7 @@ function Sprint({ active, config }) {
             if (d.tHistory) setTHistory(d.tHistory);
           }
         }
-      } catch (e) { /* fresh start */ }
+      } catch { /* fresh start */ }
       loadedRef.current = true;
     })();
   }, [storageKey]);
@@ -609,7 +609,7 @@ function Ladder({ active, config }) {
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [totals, setTotals] = useState({ right: 0, wrong: 0 });
-  const [startTime, setStartTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(() => Date.now());
   const [lastTime, setLastTime] = useState(null);
   const [times, setTimes] = useState([]);
   const timeoutRef = useRef(null);
@@ -623,12 +623,14 @@ function Ladder({ active, config }) {
     setWalk(null);
     setSubFlash(null);
     setPhase("solve");
+    // eslint-disable-next-line react-hooks/purity -- event handler, never render
     setStartTime(Date.now());
   };
 
   const submit = () => {
     if (input === "") return;
     if (phase === "solve") {
+      // eslint-disable-next-line react-hooks/purity -- event handler, never render
       const elapsed = (Date.now() - startTime) / 1000;
       const correct = parseInt(input, 10) === apply(a, b);
       setLastTime(elapsed);
