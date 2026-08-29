@@ -8,3 +8,8 @@ node_modules/
 *.tsbuildinfo
 .vercel
 .env*.local
+
+# local agent tooling (symlinks into a private dotfiles repo)
+.claude/
+.agents/
+.private/
